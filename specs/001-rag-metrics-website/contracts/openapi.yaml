@@ -1,0 +1,587 @@
+openapi: 3.0.3
+info:
+  title: RAG Metrics Calculator API
+  description: |
+    Backend API for calculating RAG (Retrieval-Augmented Generation) metrics from uploaded CSV data.
+    This API provides endpoints for validating CSV files, calculating various metrics (precision, recall, F1, semantic similarity),
+    and generating PDF reports.
+  version: 1.0.0
+  contact:
+    name: RAG Metrics Team
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.rag-metrics.example.com
+    description: Production server
+
+tags:
+  - name: validation
+    description: CSV file validation operations
+  - name: metrics
+    description: Metric calculation operations
+  - name: export
+    description: Export and report generation operations
+  - name: health
+    description: Health check and status operations
+
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check endpoint
+      description: Returns the health status of the API service
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1/validate:
+    post:
+      tags:
+        - validation
+      summary: Validate CSV file structure
+      description: |
+        Validates the uploaded CSV file to ensure it contains required columns and proper formatting.
+        Does not process the entire file, only validates structure and first few rows.
+      operationId: validateCSV
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file to validate (max 50MB)
+                columnMappings:
+                  type: object
+                  description: Optional column name mappings
+                  properties:
+                    query:
+                      type: string
+                      example: "question"
+                    response:
+                      type: string
+                      example: "generated_answer"
+                    groundTruth:
+                      type: string
+                      example: "correct_answer"
+      responses:
+        '200':
+          description: Validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '413':
+          description: File too large (>50MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/metrics/calculate:
+    post:
+      tags:
+        - metrics
+      summary: Calculate RAG metrics
+      description: |
+        Processes the uploaded CSV file and calculates various RAG metrics including
+        precision, recall, F1 score, semantic similarity, BLEU, and ROUGE scores.
+      operationId: calculateMetrics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetricsCalculationRequest'
+      responses:
+        '200':
+          description: Metrics calculated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsCalculationResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Data processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/export/pdf:
+    post:
+      tags:
+        - export
+      summary: Generate PDF report
+      description: |
+        Generates a PDF report containing calculated metrics, visualizations, and detailed analysis.
+      operationId: generatePDFReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PDFExportRequest'
+      responses:
+        '200':
+          description: PDF generated successfully
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: healthy
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-01-27T12:00:00Z"
+        version:
+          type: string
+          example: "1.0.0"
+
+    ValidationResponse:
+      type: object
+      required:
+        - valid
+        - rowCount
+        - columns
+      properties:
+        valid:
+          type: boolean
+          description: Whether the CSV file is valid
+          example: true
+        rowCount:
+          type: integer
+          description: Number of data rows (excluding header)
+          example: 1000
+        columns:
+          type: array
+          description: List of column names found in CSV
+          items:
+            type: string
+          example: ["question", "generated_answer", "correct_answer"]
+        detectedMappings:
+          type: object
+          description: Auto-detected column mappings
+          properties:
+            query:
+              type: string
+              example: "question"
+            response:
+              type: string
+              example: "generated_answer"
+            groundTruth:
+              type: string
+              example: "correct_answer"
+        preview:
+          type: array
+          description: First 10 rows of data
+          items:
+            type: object
+            additionalProperties: true
+        warnings:
+          type: array
+          description: Non-critical validation warnings
+          items:
+            $ref: '#/components/schemas/ValidationWarning'
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - valid
+        - errors
+      properties:
+        valid:
+          type: boolean
+          example: false
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+
+    ValidationError:
+      type: object
+      required:
+        - code
+        - message
+        - severity
+      properties:
+        code:
+          type: string
+          enum: [MISSING_COLUMN, EMPTY_VALUES, INVALID_FORMAT, FILE_TOO_LARGE, ENCODING_ERROR]
+          example: MISSING_COLUMN
+        message:
+          type: string
+          example: "Required column 'ground_truth' not found in CSV"
+        severity:
+          type: string
+          enum: [ERROR, WARNING]
+          example: ERROR
+        rowIndex:
+          type: integer
+          description: Row number where error occurred (if applicable)
+          example: 45
+        columnName:
+          type: string
+          description: Column name where error occurred (if applicable)
+          example: "response"
+
+    ValidationWarning:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: EMPTY_VALUES
+        message:
+          type: string
+          example: "Row 45 has empty value in 'response' column"
+        rowIndex:
+          type: integer
+          example: 45
+
+    MetricsCalculationRequest:
+      type: object
+      required:
+        - data
+        - columnMappings
+      properties:
+        data:
+          type: array
+          description: Array of data rows to process
+          items:
+            $ref: '#/components/schemas/DataRow'
+        columnMappings:
+          $ref: '#/components/schemas/ColumnMapping'
+        metricTypes:
+          type: array
+          description: Specific metrics to calculate (if not provided, calculates all)
+          items:
+            type: string
+            enum: [precision, recall, f1Score, semanticSimilarity, bleuScore, rougeScore]
+          example: ["precision", "recall", "f1Score", "semanticSimilarity"]
+
+    DataRow:
+      type: object
+      required:
+        - rowIndex
+        - query
+        - response
+        - groundTruth
+      properties:
+        rowIndex:
+          type: integer
+          minimum: 1
+          example: 1
+        query:
+          type: string
+          maxLength: 10000
+          example: "What is the capital of France?"
+        response:
+          type: string
+          maxLength: 10000
+          example: "The capital of France is Paris."
+        groundTruth:
+          type: string
+          maxLength: 10000
+          example: "Paris"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional fields from CSV
+
+    ColumnMapping:
+      type: object
+      required:
+        - query
+        - response
+        - groundTruth
+      properties:
+        query:
+          type: string
+          example: "question"
+        response:
+          type: string
+          example: "generated_answer"
+        groundTruth:
+          type: string
+          example: "correct_answer"
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+    MetricsCalculationResponse:
+      type: object
+      required:
+        - id
+        - calculationTimestamp
+        - aggregateMetrics
+        - perQueryMetrics
+        - calculationTime
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        calculationTimestamp:
+          type: string
+          format: date-time
+          example: "2026-01-27T12:05:00Z"
+        aggregateMetrics:
+          $ref: '#/components/schemas/AggregateMetrics'
+        perQueryMetrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueryMetrics'
+        calculationTime:
+          type: number
+          format: float
+          description: Time taken to calculate metrics (seconds)
+          example: 28.5
+        metricTypes:
+          type: array
+          items:
+            type: string
+          example: ["precision", "recall", "f1Score", "semanticSimilarity"]
+
+    AggregateMetrics:
+      type: object
+      required:
+        - precision
+        - recall
+        - f1Score
+        - semanticSimilarity
+      properties:
+        precision:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.85
+        recall:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.82
+        f1Score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.835
+        semanticSimilarity:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.78
+        bleuScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.72
+        rougeScore:
+          type: object
+          properties:
+            rouge1:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+              example: 0.75
+            rouge2:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+              example: 0.68
+            rougeL:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+              example: 0.73
+        exactMatchRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.15
+
+    QueryMetrics:
+      type: object
+      required:
+        - rowIndex
+        - query
+        - precision
+        - recall
+        - f1Score
+        - semanticSimilarity
+      properties:
+        rowIndex:
+          type: integer
+          example: 1
+        query:
+          type: string
+          example: "What is the capital of France?"
+        precision:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 1.0
+        recall:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 1.0
+        f1Score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 1.0
+        semanticSimilarity:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.95
+        responseLength:
+          type: integer
+          minimum: 0
+          example: 32
+        groundTruthLength:
+          type: integer
+          minimum: 0
+          example: 5
+        issues:
+          type: array
+          items:
+            type: string
+          example: []
+
+    PDFExportRequest:
+      type: object
+      required:
+        - datasetInfo
+        - aggregateMetrics
+        - perQueryMetrics
+      properties:
+        datasetInfo:
+          $ref: '#/components/schemas/DatasetInfo'
+        aggregateMetrics:
+          $ref: '#/components/schemas/AggregateMetrics'
+        perQueryMetrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueryMetrics'
+        includeCharts:
+          type: boolean
+          default: true
+          description: Whether to include visualizations in PDF
+        includeDetailedBreakdown:
+          type: boolean
+          default: true
+          description: Whether to include per-query details
+
+    DatasetInfo:
+      type: object
+      required:
+        - fileName
+        - rowCount
+        - uploadTimestamp
+      properties:
+        fileName:
+          type: string
+          example: "evaluation_data.csv"
+        rowCount:
+          type: integer
+          example: 1000
+        uploadTimestamp:
+          type: string
+          format: date-time
+          example: "2026-01-27T12:00:00Z"
+        fileSize:
+          type: integer
+          description: File size in bytes
+          example: 2048576
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid CSV format"
+        details:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-01-27T12:00:00Z"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (optional for MVP)
+
+security: []
+
+# Made with Bob

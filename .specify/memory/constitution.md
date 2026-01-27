@@ -1,50 +1,73 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Static SPA Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Static Build Output
+All application code must compile to static files (HTML, CSS, JavaScript) with no server-side runtime dependencies. The build process must produce deployable assets that can be served from any static file host (CDN, S3, GitHub Pages, etc.).
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Component-Based Architecture
+UI must be built using reusable, self-contained components with clear interfaces. Each component should have a single responsibility and be independently testable.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Performance Standards
+- Initial bundle size must not exceed 500KB (gzipped)
+- First Contentful Paint (FCP) must be under 2 seconds
+- Time to Interactive (TTI) must be under 5 seconds on 3G networks
+- Implement code splitting and lazy loading for routes and heavy components
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+## Technical Constraints
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### Build Requirements
+- Use a modern bundler (Webpack, Vite, Rollup, or Parcel)
+- Support ES6+ with transpilation for browser compatibility
+- Minify and optimize all production assets
+- Generate source maps for debugging
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### Browser Support
+- Support last 2 versions of major browsers (Chrome, Firefox, Safari, Edge)
+- Graceful degradation for older browsers
+- Mobile-first responsive design required
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### Dependencies
+- Keep production dependencies minimal
+- Regular security audits of npm packages
+- Document all third-party library choices
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### Testing Requirements
+- Unit tests for critical business logic
+- Component tests for UI components
+- End-to-end tests for critical user flows
+- Minimum 70% code coverage for new features
+
+### Build Pipeline
+- Local development server with hot reload
+- Automated builds on pull requests
+- Production builds must pass all tests
+- Environment-specific configuration (dev, staging, production)
+
+### Deployment Process
+- CI/CD pipeline for automated deployments
+- Preview deployments for pull requests
+- Rollback capability for production issues
+- Cache invalidation strategy for updates
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### Code Quality
+- All code changes require peer review
+- Follow established coding standards and linting rules
+- No direct commits to main/production branches
+- Breaking changes require documentation and migration guide
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### Version Control
+- Semantic versioning (MAJOR.MINOR.PATCH)
+- Maintain changelog for all releases
+- Tag releases in version control
+
+### Constitution Updates
+- Constitution changes require team consensus
+- Document rationale for all amendments
+- Review constitution quarterly for relevance
+
+**Version**: 1.0.0 | **Ratified**: 2026-01-27 | **Last Amended**: 2026-01-27

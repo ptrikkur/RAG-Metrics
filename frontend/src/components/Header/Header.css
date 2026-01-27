@@ -1,0 +1,12 @@
+.header-logo {
+  height: 32px;
+  width: auto;
+  margin-right: 0.5rem;
+}
+
+.header-title {
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+/* Made with Bob */
